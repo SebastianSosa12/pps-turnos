@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HealthTrack.Infrastructure\HealthTrack.Infrastructure.csproj" />
+    <ProjectReference Include="..\HealthTrack.Domain\HealthTrack.Domain.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,4 +1,32 @@
 version: "3.9"
 services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Your_password123
+    ports:
+      - "14333:1433"
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=dynamodb,sqs,s3
   api:
-    image: hello-world
+    build: ./backend
+    environment:
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
+      - ConnectionStrings__Default=Server=sqlserver,1433;Database=HealthTrack;User Id=sa;Password=Your_password123;TrustServerCertificate=True;
+      - AWS__ServiceURL=http://localstack:4566
+      - FeatureFlags__FallbackPath=/app/feature-flags.json
+    ports:
+      - "8080:8080"
+    depends_on: [sqlserver, localstack]
+  web:
+    build: ./frontend/healthtrack-web
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE=http://localhost:8080
+    depends_on: [api]

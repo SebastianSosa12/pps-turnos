@@ -1,5 +1,6 @@
-# Node
-node_modules/
-# .NET
 bin/
 obj/
+node_modules/
+.vscode/
+.idea/
+.DS_Store

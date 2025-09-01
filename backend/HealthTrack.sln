@@ -1,1 +1,11 @@
-# Placeholder sln
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthTrack.Api", "src\HealthTrack.Api\HealthTrack.Api.csproj", "{11111111-1111-1111-1111-111111111111}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthTrack.Domain", "src\HealthTrack.Domain\HealthTrack.Domain.csproj", "{22222222-2222-2222-2222-222222222222}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthTrack.Application", "src\HealthTrack.Application\HealthTrack.Application.csproj", "{33333333-3333-3333-3333-333333333333}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthTrack.Infrastructure", "src\HealthTrack.Infrastructure\HealthTrack.Infrastructure.csproj", "{44444444-4444-4444-4444-444444444444}"
+EndProject
+Global
+EndGlobal

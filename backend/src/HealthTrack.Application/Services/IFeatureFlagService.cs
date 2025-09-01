@@ -1,0 +1,1 @@
+namespace HealthTrack.Application.Services { public interface IFeatureFlagService { Task<bool> IsEnabledAsync(string key, System.Threading.CancellationToken ct = default); Task<IDictionary<string, object>> SnapshotAsync(System.Threading.CancellationToken ct = default); } }

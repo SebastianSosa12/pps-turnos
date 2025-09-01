@@ -1,1 +1,2 @@
-# Architecture placeholder
+# Architecture
+Minimal architecture description.

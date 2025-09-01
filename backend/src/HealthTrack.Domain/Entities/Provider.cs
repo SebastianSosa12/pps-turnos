@@ -1,0 +1,1 @@
+namespace HealthTrack.Domain.Entities { public class Provider { public Guid Id {get;set;}=Guid.NewGuid(); public string FullName {get;set;}=string.Empty; public string Specialty {get;set;}=string.Empty; public string Email {get;set;}=string.Empty; } }

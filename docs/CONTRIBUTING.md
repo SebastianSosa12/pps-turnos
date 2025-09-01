@@ -1,1 +1,2 @@
-# Contributing placeholder
+# Contributing
+PRs + code reviews.
