@@ -1,0 +1,21 @@
+{
+  "version": "48.0.0",
+  "files": {
+    "2b03c0de5eb7c6db134d130fbbc8d2d63809b0b528f1e000877434e92d74a746": {
+      "displayName": "HealthTrackStack Template",
+      "source": {
+        "path": "HealthTrackStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "000000000000-us-east-1-92df6b79": {
+          "bucketName": "cdk-hnb659fds-assets-000000000000-us-east-1",
+          "objectKey": "2b03c0de5eb7c6db134d130fbbc8d2d63809b0b528f1e000877434e92d74a746.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::000000000000:role/cdk-hnb659fds-file-publishing-role-000000000000-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

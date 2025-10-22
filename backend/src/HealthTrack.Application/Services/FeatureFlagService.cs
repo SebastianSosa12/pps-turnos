@@ -1,33 +1,43 @@
-
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace HealthTrack.Application.Services;
 
-public sealed class FeatureFlagService : IFeatureFlagService
+public sealed class FeatureFlagService(
+  Func<string, System.Threading.CancellationToken, Task<bool>> provider,
+  string? fallbackPath)
+  : IFeatureFlagService
 {
-    private readonly string? _fallbackPath;
-    private readonly Func<string, System.Threading.CancellationToken, Task<bool>> _provider;
-    public FeatureFlagService(Func<string, System.Threading.CancellationToken, Task<bool>> provider, string? fallbackPath) { _provider = provider; _fallbackPath = fallbackPath; }
-
-    public async Task<bool> IsEnabledAsync(string key, System.Threading.CancellationToken ct = default)
+  public async Task<bool> IsEnabledAsync(string key, System.Threading.CancellationToken ct = default)
+  {
+    try
     {
-        try { return await _provider(key, ct); }
-        catch {
-            if (!string.IsNullOrWhiteSpace(_fallbackPath) && File.Exists(_fallbackPath)) {
-                var json = await File.ReadAllTextAsync(_fallbackPath, ct);
-                var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
-                return dict.TryGetValue(key, out var val) && val is bool b && b;
-            }
-            return false;
-        }
+      return await provider(key, ct);
+    }
+    catch
+    {
+      if (!string.IsNullOrWhiteSpace(fallbackPath) && File.Exists(fallbackPath))
+      {
+        var json = await File.ReadAllTextAsync(fallbackPath, ct);
+        var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
+        return dict.TryGetValue(key, out var val) && val is bool b && b;
+      }
+
+      return false;
+    }
+  }
+
+  public async Task<IDictionary<string, object>> SnapshotAsync(System.Threading.CancellationToken ct = default)
+  {
+    if (!string.IsNullOrWhiteSpace(fallbackPath) && File.Exists(fallbackPath))
+    {
+      var json = await File.ReadAllTextAsync(fallbackPath, ct);
+      return JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
     }
 
-    public async Task<IDictionary<string, object>> SnapshotAsync(System.Threading.CancellationToken ct = default)
-    {
-        if (!string.IsNullOrWhiteSpace(_fallbackPath) && File.Exists(_fallbackPath)) {
-            var json = await File.ReadAllTextAsync(_fallbackPath, ct);
-            return JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
-        }
-        return new Dictionary<string, object>();
-    }
+    return new Dictionary<string, object>();
+  }
 }

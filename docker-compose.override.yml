@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+  web:
+    volumes:
+      # Mount source code for hot reload
+      - ./frontend/healthtrack-web/src:/app/src
+      - ./frontend/healthtrack-web/index.html:/app/index.html
+      - ./frontend/healthtrack-web/vite.config.ts:/app/vite.config.ts
+      - ./frontend/healthtrack-web/tsconfig.json:/app/tsconfig.json
+      # Exclude node_modules to avoid conflicts
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE=http://localhost:8080
+      - CHOKIDAR_USEPOLLING=true  # Better file watching in Docker
+

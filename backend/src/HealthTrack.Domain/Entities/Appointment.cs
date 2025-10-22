@@ -1,1 +1,14 @@
-namespace HealthTrack.Domain.Entities { public class Appointment { public Guid Id {get;set;}=Guid.NewGuid(); public Guid PatientId {get;set;} public Guid ProviderId {get;set;} public DateTime StartsAtUtc {get;set;} public DateTime EndsAtUtc {get;set;} public string? Notes {get;set;} } }
+using System;
+
+namespace HealthTrack.Domain.Entities
+{
+  public class Appointment
+  {
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid PatientId { get; set; }
+    public Guid ProviderId { get; set; }
+    public DateTime StartsAtUtc { get; set; }
+    public DateTime EndsAtUtc { get; set; }
+    public string? Notes { get; set; }
+  }
+}

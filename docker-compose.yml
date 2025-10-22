@@ -1,12 +1,12 @@
 version: "3.9"
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+  mysql:
+    image: mysql:8.0
     environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=Your_password123
+      - MYSQL_ROOT_PASSWORD=Your_password123
+      - MYSQL_DATABASE=HealthTrack
     ports:
-      - "14333:1433"
+      - "3306:3306"
   localstack:
     image: localstack/localstack:latest
     ports:
@@ -17,12 +17,15 @@ services:
     build: ./backend
     environment:
       - ASPNETCORE_URLS=http://0.0.0.0:8080
-      - ConnectionStrings__Default=Server=sqlserver,1433;Database=HealthTrack;User Id=sa;Password=Your_password123;TrustServerCertificate=True;
+      - ConnectionStrings__Default=Server=mysql;Database=HealthTrack;User=root;Password=Your_password123;
       - AWS__ServiceURL=http://localstack:4566
       - FeatureFlags__FallbackPath=/app/feature-flags.json
+      - Jwt__Secret=super-secret-jwt-key-for-healthtrack-docker-that-should-be-changed-in-production
+      - Jwt__Issuer=HealthTrack
+      - Jwt__Audience=HealthTrack
     ports:
       - "8080:8080"
-    depends_on: [sqlserver, localstack]
+    depends_on: [mysql, localstack]
   web:
     build: ./frontend/healthtrack-web
     ports:

@@ -1,4 +1,7 @@
 
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 
@@ -16,7 +19,7 @@ public static class DynamoFeatureFlagProvider
                 TableName = "FeatureFlags",
                 Key = new Dictionary<string, AttributeValue> { { "Key", new AttributeValue { S = key } } }
             }, ct);
-            if (resp.Item.TryGetValue("Value", out var v) && v.BOOL.HasValue) return v.BOOL.Value;
+            if (resp.Item.TryGetValue("Value", out var v) && v.BOOL) return v.BOOL;
             return false;
         };
     }
