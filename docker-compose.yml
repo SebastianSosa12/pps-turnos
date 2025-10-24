@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   mysql:
     image: mysql:8.0
@@ -17,7 +16,7 @@ services:
     build: ./backend
     environment:
       - ASPNETCORE_URLS=http://0.0.0.0:8080
-      - ConnectionStrings__Default=Server=mysql;Database=HealthTrack;User=root;Password=Your_password123;
+      - ConnectionStrings__Default=Server=mysql;Port=3306;Database=HealthTrack;User=root;Password=Your_password123;SslMode=None;AllowPublicKeyRetrieval=True
       - AWS__ServiceURL=http://localstack:4566
       - FeatureFlags__FallbackPath=/app/feature-flags.json
       - Jwt__Secret=super-secret-jwt-key-for-healthtrack-docker-that-should-be-changed-in-production

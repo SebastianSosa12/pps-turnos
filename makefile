@@ -43,18 +43,15 @@ setup: check-tools
 	@$(COMPOSE) up -d localstack
 	@echo "⏳ Waiting for services..."
 	@powershell -Command "Start-Sleep -Seconds 3"
-	@echo "🅱️ Bootstrapping CDK..."
-	@cd infra/cdk && $(CDK) bootstrap --profile default --cloudformation-execution-policies="*" --qualifier local
-	@echo "☁️ Deploying AWS infrastructure..."
-	@cd infra/cdk && $(CDK) deploy $(STACK) --require-approval never
+	
 	@echo "🌱 Seeding AWS resources..."
-	@$(MAKE) aws-seed
+	@make aws-seed
 	@echo "🚀 Starting full application stack..."
 	@$(COMPOSE) up -d --build
 	@echo "⏳ Database warmup..."
 	@powershell -Command "Start-Sleep -Seconds 10"
 	@echo "💾 Seeding database..."
-	@$(MAKE) db-seed
+	@make db-seed
 	@echo ""
 	@echo "✅ BOOM! Everything deployed!"
 	@echo "   Frontend: http://localhost:5173"
