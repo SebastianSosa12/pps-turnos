@@ -90,21 +90,13 @@ var app = builder.Build();
 // Database Initialization (Development/Local)
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<HealthTrackDbContext>();
-    
-    // For development: recreate database to ensure all tables exist
-    if (app.Environment.IsDevelopment())
-    {
-        Console.WriteLine("🔄 Development mode: Recreating database with latest schema...");
-        dbContext.Database.EnsureDeleted();
-        dbContext.Database.EnsureCreated();
-        Console.WriteLine("✅ Database recreated with fresh schema");
-    }
-    else
-    {
-        // Production: only ensure database exists, don't drop
-        dbContext.Database.EnsureCreated();
-    }
+  var dbContext = scope.ServiceProvider.GetRequiredService<HealthTrackDbContext>();
+
+  // Development: keep data between restarts
+  dbContext.Database.EnsureCreated();
+
+  // If you use EF Migrations, prefer this instead:
+  // dbContext.Database.Migrate();
 }
 
 // Middleware Pipeline

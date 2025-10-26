@@ -2,11 +2,13 @@
 using HealthTrack.Domain.Dtos;
 using HealthTrack.Domain.Entities;
 using HealthTrack.Infrastructure.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace HealthTrack.Api.Controllers;
 
+[AllowAnonymous]
 [ApiController]
 [Route("api/[controller]")]
 public class AppointmentsController(
@@ -16,51 +18,65 @@ public class AppointmentsController(
   ILogger<AppointmentsController> logger)
   : ControllerBase
 {
-  // GET /api/appointments?from=...&to=...&providerId=...
-    [HttpGet]
-    public async Task<IActionResult> Get([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] Guid? providerId, CancellationToken ct)
-    {
-        var q = db.Appointments.AsQueryable();
-        if (from.HasValue) q = q.Where(a => a.StartsAtUtc >= from);
-        if (to.HasValue) q = q.Where(a => a.EndsAtUtc <= to);
-        if (providerId.HasValue) q = q.Where(a => a.ProviderId == providerId);
+  // GET /api/appointments?q=&from=&to=&providerId=
+  [HttpGet]
+  public async Task<IActionResult> Get(
+    [FromQuery] string? q,
+    [FromQuery] DateTime? from,
+    [FromQuery] DateTime? to,
+    [FromQuery] Guid? providerId,
+    CancellationToken ct)
+  {
+    var query = db.Appointments.AsNoTracking().AsQueryable();
 
-        var list = await q.OrderBy(a => a.StartsAtUtc).ToListAsync(ct);
-        return Ok(list);
+    if (!string.IsNullOrWhiteSpace(q))
+    {
+      var s = q.Trim().ToLower();
+      query = query.Where(a =>
+        a.PatientId.ToString().ToLower().Contains(s) ||
+        a.ProviderId.ToString().ToLower().Contains(s));
     }
 
-    // POST /api/appointments
-    [HttpPost]
-    public async Task<IActionResult> Create([FromBody] AppointmentDto dto, CancellationToken ct)
+    if (from.HasValue) query = query.Where(a => a.StartsAtUtc >= from.Value);
+    if (to.HasValue) query = query.Where(a => a.EndsAtUtc <= to.Value);
+    if (providerId.HasValue) query = query.Where(a => a.ProviderId == providerId.Value);
+
+    var list = await query
+      .OrderByDescending(a => a.StartsAtUtc)
+      .ToListAsync(ct);
+
+    return Ok(list);
+  }
+
+  // POST /api/appointments
+  [HttpPost]
+  public async Task<IActionResult> Create([FromBody] AppointmentDto dto, CancellationToken ct)
+  {
+    var entity = new Appointment
     {
-        var entity = new Appointment
-        {
-            PatientId = dto.PatientId,
-            ProviderId = dto.ProviderId,
-            StartsAtUtc = dto.StartsAtUtc,
-            EndsAtUtc = dto.EndsAtUtc,
-            Notes = dto.Notes
-        };
+      PatientId = dto.PatientId,
+      ProviderId = dto.ProviderId,
+      StartsAtUtc = DateTime.SpecifyKind(dto.StartsAtUtc, DateTimeKind.Utc),
+      EndsAtUtc = DateTime.SpecifyKind(dto.EndsAtUtc, DateTimeKind.Utc),
+      Notes = dto.Notes
+    };
 
-        try
-        {
-            var created = await svc.CreateAsync(entity, ct);
+    try
+    {
+      var created = await svc.CreateAsync(entity, ct);
 
-            if (await flags.IsEnabledAsync("appointments.reminders.enabled", ct))
-            {
-                // Demo: just log for now
-                logger.LogInformation("Would enqueue reminder for appointment {AppointmentId}", created.Id);
-            }
+      if (await flags.IsEnabledAsync("appointments.reminders.enabled", ct))
+        logger.LogInformation("Would enqueue reminder for appointment {AppointmentId}", created.Id);
 
-            return Created($"/api/appointments/{created.Id}", created);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { error = ex.Message });
-        }
+      return Created($"/api/appointments/{created.Id}", created);
     }
+    catch (ArgumentException ex)
+    {
+      return BadRequest(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+      return Conflict(new { error = ex.Message });
+    }
+  }
 }
