@@ -83,14 +83,15 @@ export async function getFlags(): Promise<FeatureFlags> {
 
 /* -------------------- Patients -------------------- */
 
-export async function getPatients(q?: string): Promise<Patient[]> {
-  const url = buildUrl("/api/patients", { q });
+export async function getPatients(patientName?: string): Promise<Patient[]> {
+  const url = buildUrl("/api/patients", { patientName });
   return request<Patient[]>(url.toString());
 }
 
-export async function searchPatients(q: string, limit = 10): Promise<Option[]> {
-  const url = buildUrl("/api/patients", { q, limit: String(limit) });
-  return request<Option[]>(url.toString());
+export async function searchPatients(patientName: string, limit = 10): Promise<Option[]> {
+  const url = buildUrl("/api/patients", { patientName, limit: String(limit) });
+  const data = await request<Patient[]>(url.toString());
+  return data.map((p) => ({ id: p.id, fullName: p.fullName }));
 }
 
 export async function createPatient(payload: CreatePatientPayload): Promise<Patient> {
@@ -103,14 +104,15 @@ export async function createPatient(payload: CreatePatientPayload): Promise<Pati
 
 /* -------------------- Doctors -------------------- */
 
-export async function getDoctors(q?: string): Promise<Doctor[]> {
-  const url = buildUrl("/api/doctors", { q });
+export async function getDoctors(doctorName?: string): Promise<Doctor[]> {
+  const url = buildUrl("/api/doctors", { doctorName });
   return request<Doctor[]>(url.toString());
 }
 
-export async function searchDoctors(q: string, limit = 10): Promise<Option[]> {
-  const url = buildUrl("/api/doctors", { q, limit: String(limit) });
-  return request<Option[]>(url.toString());
+export async function searchDoctors(doctorName: string, limit = 10): Promise<Option[]> {
+  const url = buildUrl("/api/doctors", { doctorName, limit: String(limit) });
+  const data = await request<Doctor[]>(url.toString());
+  return data.map((d) => ({ id: d.id, fullName: d.fullName }));
 }
 
 export async function createDoctor(payload: CreateDoctorPayload): Promise<Doctor> {
@@ -123,8 +125,8 @@ export async function createDoctor(payload: CreateDoctorPayload): Promise<Doctor
 
 /* -------------------- Appointments -------------------- */
 
-export async function getAppointments(q?: string): Promise<Appointment[]> {
-  const url = buildUrl("/api/appointments", { q });
+export async function getAppointments(searchText?: string): Promise<Appointment[]> {
+  const url = buildUrl("/api/appointments", { searchText });
   return request<Appointment[]>(url.toString());
 }
 

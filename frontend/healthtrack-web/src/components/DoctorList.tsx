@@ -6,7 +6,7 @@ import Divider from "./Divider";
 import { Search, ListChecks, UserPlus } from "lucide-react";
 
 export default function DoctorList() {
-  const [q, setQ] = useState("");
+  const [doctorName, setDoctorName] = useState("");
   const [items, setItems] = useState<any[]>([]);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,7 +32,7 @@ export default function DoctorList() {
       setFullName("");
       setEmail("");
       setSpecialty("");
-      await load(q);
+      await load(doctorName);
     } catch (err: any) {
       setStatus("Error: " + err.message);
     }
@@ -45,9 +45,9 @@ export default function DoctorList() {
   useEffect(() => {
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
     typingTimeout.current = window.setTimeout(() => {
-      load(q);
+      load(doctorName);
     }, 400);
-  }, [q]);
+  }, [doctorName]);
 
   const canAdd = !!fullName && !!email && !!specialty;
 
@@ -83,8 +83,8 @@ export default function DoctorList() {
             <SectionTitle icon={Search}>Filter</SectionTitle>
             <div className="flex-1 min-w-[250px] max-w-sm">
               <SearchBar
-                value={q}
-                onChange={setQ}
+                value={doctorName}
+                onChange={setDoctorName}
                 placeholder="Search by name, specialty, or email"
               />
             </div>

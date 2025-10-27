@@ -6,11 +6,11 @@ import Divider from "./Divider";
 import { Search, ListChecks, UserPlus } from "lucide-react";
 
 function PatientsList() {
-  const [q, setQ] = useState("");
+  const [patientName, setPatientName] = useState("");
   const [items, setItems] = useState<any[]>([]);
-  const [newName, setNewName] = useState("");
-  const [newEmail, setNewEmail] = useState("");
-  const [newDob, setNewDob] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [status, setStatus] = useState("");
   const typingTimeout = useRef<number | null>(null);
 
@@ -21,22 +21,22 @@ function PatientsList() {
 
   async function addPatient(e: React.FormEvent) {
     e.preventDefault();
-    if (!newName || !newEmail || !newDob) {
+    if (!fullName || !email || !dateOfBirth) {
       setStatus("Please complete all required fields before adding a patient.");
       return;
     }
     setStatus("Submitting…");
     try {
       await createPatient({
-        fullName: newName,
-        email: newEmail,
-        dateOfBirth: new Date(newDob).toISOString(),
+        fullName,
+        email,
+        dateOfBirth: new Date(dateOfBirth).toISOString(),
       });
       setStatus("Added!");
-      setNewName("");
-      setNewEmail("");
-      setNewDob("");
-      await load(q);
+      setFullName("");
+      setEmail("");
+      setDateOfBirth("");
+      await load(patientName);
     } catch (err: any) {
       setStatus("Error: " + err.message);
     }
@@ -49,11 +49,11 @@ function PatientsList() {
   useEffect(() => {
     if (typingTimeout.current) window.clearTimeout(typingTimeout.current);
     typingTimeout.current = window.setTimeout(() => {
-      load(q);
+      load(patientName);
     }, 400);
-  }, [q]);
+  }, [patientName]);
 
-  const canAdd = !!newName && !!newEmail && !!newDob;
+  const canAdd = !!fullName && !!email && !!dateOfBirth;
 
   return (
     <div className="space-y-6">
@@ -63,8 +63,8 @@ function PatientsList() {
           <SectionTitle icon={Search}>Filter</SectionTitle>
           <div className="w-full max-w-sm">
             <SearchBar
-              value={q}
-              onChange={setQ}
+              value={patientName}
+              onChange={setPatientName}
               placeholder="Search by name or email"
             />
           </div>
@@ -106,33 +106,33 @@ function PatientsList() {
             <form onSubmit={addPatient} className="space-y-3">
               <div className="grid gap-3">
                 <div>
-                  <label className="label">Full name</label>
+                  <label className="block text-sm font-medium text-white mb-1">Full name</label>
                   <input
                     className="input"
                     placeholder="John Doe"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
                     autoComplete="name"
                   />
                 </div>
                 <div>
-                  <label className="label">Email</label>
+                  <label className="block text-sm font-medium text-white mb-1">Email</label>
                   <input
                     className="input"
                     placeholder="john@example.com"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     type="email"
                     autoComplete="email"
                   />
                 </div>
                 <div>
-                  <label className="label">Date of Birth</label>
+                  <label className="block text-sm font-medium text-white mb-1">Date of Birth</label>
                   <input
                     className="input"
                     type="date"
-                    value={newDob}
-                    onChange={(e) => setNewDob(e.target.value)}
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
                   />
                 </div>
               </div>

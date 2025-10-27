@@ -18,37 +18,40 @@ public class AppointmentsController(
   ILogger<AppointmentsController> logger)
   : ControllerBase
 {
-  // GET /api/appointments?q=&from=&to=&providerId=
   [HttpGet]
   public async Task<IActionResult> Get(
-    [FromQuery] string? q,
-    [FromQuery] DateTime? from,
-    [FromQuery] DateTime? to,
+    [FromQuery] string? searchText,
+    [FromQuery] DateTime? fromUtc,
+    [FromQuery] DateTime? toUtc,
     [FromQuery] Guid? providerId,
-    CancellationToken ct)
+    [FromQuery] int limit = 200,
+    CancellationToken ct = default)
   {
+    var max = Math.Clamp(limit, 1, 500);
+
     var query = db.Appointments.AsNoTracking().AsQueryable();
 
-    if (!string.IsNullOrWhiteSpace(q))
+    if (!string.IsNullOrWhiteSpace(searchText))
     {
-      var s = q.Trim().ToLower();
+      var s = searchText.Trim().ToLower();
       query = query.Where(a =>
         a.PatientId.ToString().ToLower().Contains(s) ||
-        a.ProviderId.ToString().ToLower().Contains(s));
+        a.ProviderId.ToString().ToLower().Contains(s) ||
+        (a.Notes != null && a.Notes.ToLower().Contains(s)));
     }
 
-    if (from.HasValue) query = query.Where(a => a.StartsAtUtc >= from.Value);
-    if (to.HasValue) query = query.Where(a => a.EndsAtUtc <= to.Value);
+    if (fromUtc.HasValue) query = query.Where(a => a.StartsAtUtc >= fromUtc.Value);
+    if (toUtc.HasValue) query = query.Where(a => a.EndsAtUtc <= toUtc.Value);
     if (providerId.HasValue) query = query.Where(a => a.ProviderId == providerId.Value);
 
     var list = await query
       .OrderByDescending(a => a.StartsAtUtc)
+      .Take(max)
       .ToListAsync(ct);
 
     return Ok(list);
   }
 
-  // POST /api/appointments
   [HttpPost]
   public async Task<IActionResult> Create([FromBody] AppointmentDto dto, CancellationToken ct)
   {

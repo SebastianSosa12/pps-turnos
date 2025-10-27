@@ -67,7 +67,7 @@ function AppointmentForm({
             ref={patientRef}
             label="Patient"
             placeholder="Search by first or last name"
-            fetcher={(q) => searchPatients(q, 10)}
+            fetcher={(patientName) => searchPatients(patientName, 10)}
             onSelect={(opt) => setPatientId(opt.id)}
             className="input"
           />
@@ -78,7 +78,7 @@ function AppointmentForm({
             ref={doctorRef}
             label="Doctor"
             placeholder="Search by first or last name"
-            fetcher={(q) => searchDoctors(q, 10)}
+            fetcher={(doctorName) => searchDoctors(doctorName, 10)}
             onSelect={(opt) => setProviderId(opt.id)}
             className="input"
           />

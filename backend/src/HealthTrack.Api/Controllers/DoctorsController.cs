@@ -18,34 +18,26 @@ public class DoctorsController : ControllerBase
 
     /// <summary>
     /// Autocomplete de doctores.
-    /// GET /api/doctors?q=Ca&limit=10 -> devuelve { id, fullName } de los que empiezan con "Ca"
-    /// Si no se envía q, devuelve hasta 'limit' ordenados por nombre.
+    /// GET /api/doctors?doctorName=Ca&limit=10 -> devuelve { id, fullName } de los que contienen "Ca"
+    /// Si no se envía doctorName, devuelve hasta 'limit' ordenados por nombre.
     /// </summary>
     [HttpGet]
-    // [Authorize] // habilitar cuando el auth esté listo
     public async Task<ActionResult<IEnumerable<object>>> Get(
-        [FromQuery] string? q,
+        [FromQuery] string? doctorName,
         [FromQuery] int limit = 10,
         CancellationToken ct = default)
     {
         var max = Math.Clamp(limit, 1, 50);
-
         var query = _db.Providers.AsNoTracking();
 
-        if (!string.IsNullOrWhiteSpace(q))
+        if (!string.IsNullOrWhiteSpace(doctorName))
         {
-            var pattern = q.Trim() + "%";
-            // Prefijo por nombre para mejorar UX y performance
-            query = query.Where(d => EF.Functions.Like(d.FullName, pattern));
+            var term = doctorName.Trim().ToLower();
+            query = query.Where(d => d.FullName.ToLower().Contains(term));
         }
 
         var items = await query
             .OrderBy(d => d.FullName)
-            .Select(d => new
-            {
-                id = d.Id,
-                fullName = d.FullName
-            })
             .Take(max)
             .ToListAsync(ct);
 
@@ -53,7 +45,6 @@ public class DoctorsController : ControllerBase
     }
 
     [HttpPost]
-    // [Authorize] // habilitar cuando el auth esté listo
     public async Task<ActionResult<Provider>> Post([FromBody] CreateDoctorRequest body, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(body.FullName) || string.IsNullOrWhiteSpace(body.Email))
@@ -69,12 +60,6 @@ public class DoctorsController : ControllerBase
         _db.Providers.Add(entity);
         await _db.SaveChangesAsync(ct);
 
-        return Created($"/api/doctors/{entity.Id}", new
-        {
-            id = entity.Id,
-            fullName = entity.FullName,
-            email = entity.Email,
-            specialty = entity.Specialty
-        });
+        return Created($"/api/doctors/{entity.Id}", entity);
     }
 }
