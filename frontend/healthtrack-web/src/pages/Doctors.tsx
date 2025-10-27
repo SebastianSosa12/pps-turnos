@@ -1,5 +1,5 @@
 import BackButton from "../components/BackButton";
-import DoctorsManager from "../components/DoctorsManager";
+import DoctorList from "../components/DoctorList";
 
 export default function Doctors() {
   return (
@@ -7,10 +7,10 @@ export default function Doctors() {
       <BackButton />
       <div>
         <h1 className="text-2xl font-bold text-white">Doctors</h1>
-        <p className="text-subtle">Manage your doctors directory and specialties.</p>
+        <p className="text-subtle">Manage your providers.</p>
       </div>
       <div className="card p-4">
-        <DoctorsManager />
+        <DoctorList />
       </div>
     </div>
   );

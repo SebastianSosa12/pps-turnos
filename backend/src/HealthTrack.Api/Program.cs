@@ -32,14 +32,25 @@ var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HealthTrack";
 // CORS Configuration
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000") // React dev servers
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
-    });
+  options.AddPolicy("AllowFrontend", policy =>
+  {
+    policy
+      .SetIsOriginAllowed(origin =>
+      {
+        if (string.IsNullOrEmpty(origin)) return false;
+        try
+        {
+          var uri = new Uri(origin);
+          return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return false; }
+      })
+      .AllowAnyHeader()
+      .AllowAnyMethod()
+      .AllowCredentials();
+  });
 });
+
 
 // Controllers & JSON Configuration
 builder.Services.AddControllers()

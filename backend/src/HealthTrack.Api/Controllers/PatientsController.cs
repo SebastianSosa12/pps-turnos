@@ -8,49 +8,70 @@ using Microsoft.EntityFrameworkCore;
 namespace HealthTrack.Api.Controllers;
 
 [AllowAnonymous]
-// [Authorize] // enable when auth is ready
+// [Authorize] // habilitar cuando el auth esté listo
 [ApiController]
 [Route("api/[controller]")]
-public class PatientsController(HealthTrackDbContext db) : ControllerBase
+public class PatientsController : ControllerBase
 {
-  [HttpGet]
-  // [Authorize] // enable when auth is ready
-  public async Task<IActionResult> Get([FromQuery] string? q, CancellationToken ct)
-  {
-    var query = db.Patients.AsNoTracking().AsQueryable();
+    private readonly HealthTrackDbContext _db;
+    public PatientsController(HealthTrackDbContext db) => _db = db;
 
-    if (!string.IsNullOrWhiteSpace(q))
+    /// <summary>
+    /// Autocomplete de pacientes.
+    /// GET /api/patients?q=An&limit=10 -> devuelve { id, fullName } de los que empiezan con "An"
+    /// </summary>
+    [HttpGet]
+    // [Authorize] // habilitar cuando el auth esté listo
+    public async Task<IActionResult> Get(
+        [FromQuery] string? q,
+        [FromQuery] int limit = 10,
+        CancellationToken ct = default)
     {
-      var s = q.Trim().ToLower();
-      query = query.Where(p =>
-        p.FullName.ToLower().Contains(s) ||
-        p.Email.ToLower().Contains(s));
+        var max = Math.Clamp(limit, 1, 50);
+
+        var query = _db.Patients.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var pattern = q.Trim() + "%";
+            query = query.Where(p => EF.Functions.Like(p.FullName, pattern));
+        }
+
+        var list = await query
+            .OrderBy(p => p.FullName)
+            .Select(p => new
+            {
+                id = p.Id,
+                fullName = p.FullName
+            })
+            .Take(max)
+            .ToListAsync(ct);
+
+        return Ok(list);
     }
 
-    var list = await query
-      .OrderByDescending(p => p.CreatedAtUtc)
-      .ToListAsync(ct);
-
-    return Ok(list);
-  }
-
-  [HttpPost]
-  // [Authorize] // enable when auth is ready
-  public async Task<IActionResult> Create([FromBody] PatientDto dto, CancellationToken ct)
-  {
-    if (string.IsNullOrWhiteSpace(dto.FullName) || string.IsNullOrWhiteSpace(dto.Email))
-      return BadRequest(new { error = "FullName and Email are required" });
-
-    var entity = new Patient
+    [HttpPost]
+    // [Authorize] // habilitar cuando el auth esté listo
+    public async Task<IActionResult> Create([FromBody] PatientDto dto, CancellationToken ct)
     {
-      FullName = dto.FullName,
-      Email = dto.Email,
-      DateOfBirth = dto.DateOfBirth
-    };
+        if (string.IsNullOrWhiteSpace(dto.FullName) || string.IsNullOrWhiteSpace(dto.Email))
+            return BadRequest(new { error = "FullName and Email are required" });
 
-    db.Patients.Add(entity);
-    await db.SaveChangesAsync(ct);
+        var entity = new Patient
+        {
+            FullName = dto.FullName,
+            Email = dto.Email,
+            DateOfBirth = dto.DateOfBirth
+        };
 
-    return Created($"/api/patients/{entity.Id}", entity);
-  }
+        _db.Patients.Add(entity);
+        await _db.SaveChangesAsync(ct);
+
+        return Created($"/api/patients/{entity.Id}", new
+        {
+            id = entity.Id,
+            fullName = entity.FullName,
+            email = entity.Email
+        });
+    }
 }

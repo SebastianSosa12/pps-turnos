@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import SectionTitle from "./SectionTitle";
 import SearchBar from "./SearchBar";
 import Divider from "./Divider";
 import AppointmentForm from "./AppointmentForm";
 import { Search, ListChecks, CalendarPlus } from "lucide-react";
+import { getAppointments } from "../api";
 
 type Appointment = {
   id: string | number;
@@ -11,13 +12,23 @@ type Appointment = {
   providerId: string;
   startsAtUtc: string;
   endsAtUtc: string;
+  notes?: string;
 };
 
 type Props = { notesEnabled: boolean };
 
 export default function AppointmentsManager({ notesEnabled }: Props) {
-  const [items] = useState<Appointment[]>([]);
+  const [items, setItems] = useState<Appointment[]>([]);
   const [q, setQ] = useState("");
+
+  async function refresh() {
+    const data = await getAppointments();
+    setItems(data);
+  }
+
+  useEffect(() => {
+    refresh();
+  }, []);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -25,7 +36,8 @@ export default function AppointmentsManager({ notesEnabled }: Props) {
     return items.filter(
       (a) =>
         a.patientId.toLowerCase().includes(s) ||
-        a.providerId.toLowerCase().includes(s)
+        a.providerId.toLowerCase().includes(s) ||
+        (a.notes ?? "").toLowerCase().includes(s)
     );
   }, [items, q]);
 
@@ -51,6 +63,9 @@ export default function AppointmentsManager({ notesEnabled }: Props) {
                     {new Date(a.startsAtUtc).toLocaleString()} —{" "}
                     {new Date(a.endsAtUtc).toLocaleString()}
                   </div>
+                  {a.notes ? (
+                    <div className="text-sm text-white/70 mt-1">{a.notes}</div>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -63,8 +78,8 @@ export default function AppointmentsManager({ notesEnabled }: Props) {
             <SearchBar
               value={q}
               onChange={setQ}
-              onSearch={() => {}}
-              placeholder="Patient or doctor id"
+              onSearch={refresh}
+              placeholder="Search by patient, doctor or notes"
             />
           </div>
 
@@ -72,7 +87,7 @@ export default function AppointmentsManager({ notesEnabled }: Props) {
 
           <div className="space-y-3">
             <SectionTitle icon={CalendarPlus}>Create</SectionTitle>
-            <AppointmentForm notesEnabled={notesEnabled} />
+            <AppointmentForm notesEnabled={notesEnabled} onCreated={refresh} />
           </div>
         </div>
       </div>

@@ -72,7 +72,6 @@ export default function DoctorsManager() {
             <SearchBar
               value={q}
               onChange={setQ}
-              onSearch={() => {}}
               placeholder="Name or specialty"
             />
           </div>

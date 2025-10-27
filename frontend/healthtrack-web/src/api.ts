@@ -2,6 +2,8 @@ const base = import.meta.env.VITE_API_BASE || "http://localhost:8080";
 
 type FeatureFlags = Record<string, unknown>;
 
+export type Option = { id: string; fullName: string };
+
 export type Patient = {
   id: string;
   fullName: string;
@@ -79,9 +81,16 @@ export async function getFlags(): Promise<FeatureFlags> {
   return request<FeatureFlags>(base + "/api/feature-flags");
 }
 
+/* -------------------- Patients -------------------- */
+
 export async function getPatients(q?: string): Promise<Patient[]> {
   const url = buildUrl("/api/patients", { q });
   return request<Patient[]>(url.toString());
+}
+
+export async function searchPatients(q: string, limit = 10): Promise<Option[]> {
+  const url = buildUrl("/api/patients", { q, limit: String(limit) });
+  return request<Option[]>(url.toString());
 }
 
 export async function createPatient(payload: CreatePatientPayload): Promise<Patient> {
@@ -92,9 +101,16 @@ export async function createPatient(payload: CreatePatientPayload): Promise<Pati
   });
 }
 
+/* -------------------- Doctors -------------------- */
+
 export async function getDoctors(q?: string): Promise<Doctor[]> {
   const url = buildUrl("/api/doctors", { q });
   return request<Doctor[]>(url.toString());
+}
+
+export async function searchDoctors(q: string, limit = 10): Promise<Option[]> {
+  const url = buildUrl("/api/doctors", { q, limit: String(limit) });
+  return request<Option[]>(url.toString());
 }
 
 export async function createDoctor(payload: CreateDoctorPayload): Promise<Doctor> {
@@ -104,6 +120,8 @@ export async function createDoctor(payload: CreateDoctorPayload): Promise<Doctor
     body: JSON.stringify(payload),
   });
 }
+
+/* -------------------- Appointments -------------------- */
 
 export async function getAppointments(q?: string): Promise<Appointment[]> {
   const url = buildUrl("/api/appointments", { q });
