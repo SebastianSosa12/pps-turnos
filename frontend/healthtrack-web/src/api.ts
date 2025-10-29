@@ -101,6 +101,19 @@ export async function createPatient(payload: CreatePatientPayload): Promise<Pati
     body: JSON.stringify(payload),
   });
 }
+export async function updatePatient(id: string, payload: CreatePatientPayload): Promise<Patient> {
+  return request<Patient>(base + `/api/patients/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deletePatient(id: string): Promise<void> {
+  return request<void>(base + `/api/patients/${id}`, {
+    method: "DELETE",
+  });
+}
 
 /* -------------------- Doctors -------------------- */
 
@@ -123,6 +136,21 @@ export async function createDoctor(payload: CreateDoctorPayload): Promise<Doctor
   });
 }
 
+export async function updateDoctor(id: string, payload: CreateDoctorPayload): Promise<Doctor> {
+  return request<Doctor>(base + `/api/doctors/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteDoctor(id: string): Promise<void> {
+  return request<void>(base + `/api/doctors/${id}`, {
+    method: "DELETE",
+  });
+}
+
+
 /* -------------------- Appointments -------------------- */
 
 export async function getAppointments(searchText?: string): Promise<Appointment[]> {
@@ -137,3 +165,18 @@ export async function createAppointment(payload: CreateAppointmentPayload): Prom
     body: JSON.stringify(payload),
   });
 }
+
+export async function updateAppointment(id: string, payload: CreateAppointmentPayload): Promise<Appointment> {
+  return request<Appointment>(base + `/api/appointments/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAppointment(id: string): Promise<void> {
+  return request<void>(base + `/api/appointments/${id}`, {
+    method: "DELETE",
+  });
+}
+

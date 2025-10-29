@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
-import { getPatients, createPatient } from "../api";
+import { getPatients, createPatient, updatePatient, deletePatient } from "../api";
 import SectionTitle from "./SectionTitle";
 import SearchBar from "./SearchBar";
 import Divider from "./Divider";
-import { Search, ListChecks, UserPlus } from "lucide-react";
+import DatePicker from "./DatePicker";
+import { Search, ListChecks, UserPlus, X, Pencil } from "lucide-react";
 
 function PatientsList() {
   const [patientName, setPatientName] = useState("");
@@ -13,6 +14,11 @@ function PatientsList() {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [status, setStatus] = useState("");
   const typingTimeout = useRef<number | null>(null);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFullName, setEditFullName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editDateOfBirth, setEditDateOfBirth] = useState("");
 
   async function load(query: string) {
     const data = await getPatients(query);
@@ -27,15 +33,64 @@ function PatientsList() {
     }
     setStatus("Submitting…");
     try {
+      const [y, m, d] = dateOfBirth.split("-").map(Number);
+      const dobUtc = new Date(Date.UTC(y, (m ?? 1) - 1, d ?? 1)).toISOString();
       await createPatient({
         fullName,
         email,
-        dateOfBirth: new Date(dateOfBirth).toISOString(),
+        dateOfBirth: dobUtc,
       });
       setStatus("Added!");
       setFullName("");
       setEmail("");
       setDateOfBirth("");
+      await load(patientName);
+    } catch (err: any) {
+      setStatus("Error: " + err.message);
+    }
+  }
+
+  async function startEdit(p: any) {
+    setEditingId(p.id);
+    setEditFullName(p.fullName ?? "");
+    setEditEmail(p.email ?? "");
+    setEditDateOfBirth(p.dateOfBirth ? String(p.dateOfBirth).slice(0, 10) : "");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditFullName("");
+    setEditEmail("");
+    setEditDateOfBirth("");
+  }
+
+  async function saveEdit() {
+    if (!editingId || !editFullName || !editEmail || !editDateOfBirth) {
+      setStatus("Please complete all required fields before saving.");
+      return;
+    }
+    setStatus("Submitting…");
+    try {
+      const [y, m, d] = editDateOfBirth.split("-").map(Number);
+      const dobUtc = new Date(Date.UTC(y, (m ?? 1) - 1, d ?? 1)).toISOString();
+      await updatePatient(editingId, {
+        fullName: editFullName,
+        email: editEmail,
+        dateOfBirth: dobUtc,
+      });
+      setStatus("Saved!");
+      cancelEdit();
+      await load(patientName);
+    } catch (err: any) {
+      setStatus("Error: " + (err?.message ?? "Update failed"));
+    }
+  }
+
+  async function onDelete(id: string) {
+    setStatus("Submitting…");
+    try {
+      await deletePatient(id);
+      setStatus("Deleted!");
       await load(patientName);
     } catch (err: any) {
       setStatus("Error: " + err.message);
@@ -80,18 +135,84 @@ function PatientsList() {
               {items.map((p) => {
                 const d = new Date(p.dateOfBirth);
                 const dob = isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
+
+                const isEditing = editingId === p.id;
+
                 return (
                   <li
                     key={p.id}
-                    className="rounded-xl border border-white/10 px-3 py-2 flex items-center justify-between"
+                    className="rounded-xl border border-white/10 px-3 py-2"
                   >
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">{p.fullName}</div>
-                      <div className="text-mute text-sm truncate">{p.email}</div>
-                    </div>
-                    <div className="text-sm text-white/70 ml-4 shrink-0">
-                      {dob}
-                    </div>
+                    {!isEditing ? (
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{p.fullName}</div>
+                          <div className="text-mute text-sm truncate">{p.email}</div>
+                          <div className="text-sm text-white/70">{dob}</div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
+                            title="Edit"
+                            onClick={() => startEdit(p)}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
+                            title="Delete"
+                            onClick={() => onDelete(p.id)}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="grid gap-2 md:grid-cols-3">
+                          <div>
+                            <label className="block text-sm font-medium text-white mb-1">Full name</label>
+                            <input
+                              className="input"
+                              value={editFullName}
+                              onChange={(e) => setEditFullName(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-white mb-1">Email</label>
+                            <input
+                              className="input"
+                              value={editEmail}
+                              onChange={(e) => setEditEmail(e.target.value)}
+                              type="email"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-white mb-1">Date of Birth</label>
+                            <DatePicker
+                              value={editDateOfBirth}
+                              onChange={setEditDateOfBirth}
+                              placeholder="Select Date"
+                              className="input"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={saveEdit}
+                            className="btn-primary px-4 py-2"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="px-4 py-2 rounded-lg border border-white/10 hover:bg-white/10"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </li>
                 );
               })}
@@ -128,11 +249,11 @@ function PatientsList() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">Date of Birth</label>
-                  <input
-                    className="input"
-                    type="date"
+                  <DatePicker
                     value={dateOfBirth}
-                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    onChange={setDateOfBirth}
+                    placeholder="Select Date"
+                    className="input"
                   />
                 </div>
               </div>

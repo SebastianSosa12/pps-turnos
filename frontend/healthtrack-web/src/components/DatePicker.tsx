@@ -73,6 +73,19 @@ export default function DatePicker({ value, onChange, placeholder = "yyyy-mm-dd"
     setCursor(d);
   }
 
+  const months = useMemo(
+    () => Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(undefined, { month: "long" })),
+    []
+  );
+
+  const years = useMemo(() => {
+    const max = new Date().getFullYear();
+    const min = 1900;
+    const list: number[] = [];
+    for (let y = max; y >= min; y--) list.push(y);
+    return list;
+  }, []);
+
   return (
     <div className="relative" ref={wrapRef}>
       <button
@@ -86,7 +99,7 @@ export default function DatePicker({ value, onChange, placeholder = "yyyy-mm-dd"
 
       {open && (
         <div className="absolute z-50 mt-2 w-80 rounded-xl border border-white/10 bg-[#0b1220] p-3 shadow-lg">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <button
               type="button"
               className="h-8 w-8 rounded-md border border-white/20 hover:border-white/40"
@@ -97,9 +110,49 @@ export default function DatePicker({ value, onChange, placeholder = "yyyy-mm-dd"
             >
               ‹
             </button>
-            <div className="text-sm font-medium">
-              {cursor.toLocaleString(undefined, { month: "long", year: "numeric" })}
+
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <select
+                  className="ht-dark-select appearance-none bg-[#0b1220] text-white border border-white/20 rounded-md px-2 pr-7 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-white/40"
+                  value={month}
+                  onChange={(e) => {
+                    const m = Number(e.target.value);
+                    const d = new Date(cursor);
+                    d.setMonth(m, 1);
+                    setCursor(d);
+                  }}
+                >
+                  {months.map((m, i) => (
+                    <option key={i} value={i}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-2 top-1.5 text-white/70">▾</span>
+              </div>
+
+              <div className="relative">
+                <select
+                  className="ht-dark-select appearance-none bg-[#0b1220] text-white border border-white/20 rounded-md px-2 pr-7 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-white/40"
+                  value={year}
+                  onChange={(e) => {
+                    const y = Number(e.target.value);
+                    const d = new Date(cursor);
+                    d.setFullYear(y, d.getMonth(), 1);
+                    setCursor(d);
+                  }}
+                >
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-2 top-1.5 text-white/70">▾</span>
+              </div>
             </div>
+
             <button
               type="button"
               className="h-8 w-8 rounded-md border border-white/20 hover:border-white/40"
@@ -113,13 +166,7 @@ export default function DatePicker({ value, onChange, placeholder = "yyyy-mm-dd"
           </div>
 
           <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[11px] text-white/70">
-            <div>Mon</div>
-            <div>Tue</div>
-            <div>Wed</div>
-            <div>Thu</div>
-            <div>Fri</div>
-            <div>Sat</div>
-            <div>Sun</div>
+            <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
           </div>
 
           <div className="mt-1 grid grid-cols-7 gap-1">
@@ -156,7 +203,7 @@ export default function DatePicker({ value, onChange, placeholder = "yyyy-mm-dd"
               onMouseDown={(e) => {
                 e.preventDefault();
                 const t = new Date();
-                setCursor(t);
+                setCursor(new Date(t.getFullYear(), t.getMonth(), 1));
                 onChange(fmt(t));
                 setOpen(false);
               }}
@@ -176,6 +223,11 @@ export default function DatePicker({ value, onChange, placeholder = "yyyy-mm-dd"
           </div>
         </div>
       )}
+
+      <style>{`
+        .ht-dark-select, .ht-dark-select option { background-color: #0b1220; color: #ffffff; }
+        .ht-dark-select:focus { outline: none; }
+      `}</style>
     </div>
   );
 }

@@ -33,13 +33,17 @@ public class AppointmentsController(
 
     if (!string.IsNullOrWhiteSpace(searchText))
     {
-      var s = searchText.Trim().ToLower();
-      query = query.Where(a =>
-        a.PatientId.ToString().ToLower().Contains(s) ||
-        a.ProviderId.ToString().ToLower().Contains(s) ||
-        (a.Notes != null && a.Notes.ToLower().Contains(s)));
-    }
+      var term = searchText.Trim().ToLower();
 
+      query = query.Where(a =>
+        (a.Notes != null && a.Notes.ToLower().Contains(term)) ||
+        db.Patients.Any(p => p.Id == a.PatientId && p.FullName.ToLower().Contains(term)) ||
+        db.Providers.Any(pr => pr.Id == a.ProviderId &&
+                               (pr.FullName.ToLower().Contains(term) ||
+                                (pr.Specialty.ToLower().Contains(term))))
+      );
+    }
+    
     if (fromUtc.HasValue) query = query.Where(a => a.StartsAtUtc >= fromUtc.Value);
     if (toUtc.HasValue) query = query.Where(a => a.EndsAtUtc <= toUtc.Value);
     if (providerId.HasValue) query = query.Where(a => a.ProviderId == providerId.Value);
@@ -81,5 +85,32 @@ public class AppointmentsController(
     {
       return Conflict(new { error = ex.Message });
     }
+  }
+
+  [HttpPut("{id:guid}")]
+  public async Task<IActionResult> Update(Guid id, [FromBody] AppointmentDto dto, CancellationToken ct)
+  {
+    var entity = await db.Appointments.FirstOrDefaultAsync(a => a.Id == id, ct);
+    if (entity is null) return NotFound();
+
+    entity.PatientId = dto.PatientId;
+    entity.ProviderId = dto.ProviderId;
+    entity.StartsAtUtc = DateTime.SpecifyKind(dto.StartsAtUtc, DateTimeKind.Utc);
+    entity.EndsAtUtc = DateTime.SpecifyKind(dto.EndsAtUtc, DateTimeKind.Utc);
+    entity.Notes = dto.Notes;
+
+    await db.SaveChangesAsync(ct);
+    return Ok(entity);
+  }
+
+  [HttpDelete("{id:guid}")]
+  public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+  {
+    var entity = await db.Appointments.FirstOrDefaultAsync(a => a.Id == id, ct);
+    if (entity is null) return NotFound();
+
+    db.Appointments.Remove(entity);
+    await db.SaveChangesAsync(ct);
+    return NoContent();
   }
 }

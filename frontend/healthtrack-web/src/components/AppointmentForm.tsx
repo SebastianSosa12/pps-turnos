@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { createAppointment, searchDoctors, searchPatients } from "../api";
-import AutocompleteSelect from "../components/AutocompleteSelect";
+import AutocompleteSelect, { AutocompleteHandle } from "../components/AutocompleteSelect";
 import DatePicker from "../components/DatePicker";
 import TimePicker from "../components/TimePicker";
 
@@ -18,8 +18,8 @@ function AppointmentForm({
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("");
 
-  const patientRef = useRef<{ reset?: () => void }>(null);
-  const doctorRef = useRef<{ reset?: () => void }>(null);
+  const patientRef = useRef<AutocompleteHandle>(null);
+  const doctorRef  = useRef<AutocompleteHandle>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,8 +48,8 @@ function AppointmentForm({
       setTimeStr("");
       setNotes("");
 
-      patientRef.current?.reset?.();
-      doctorRef.current?.reset?.();
+      patientRef.current?.reset();
+      doctorRef.current?.reset();
 
       onCreated?.();
     } catch (e: any) {
@@ -62,30 +62,30 @@ function AppointmentForm({
   return (
     <form onSubmit={submit} className="space-y-6">
       <div className="grid gap-2 md:grid-cols-2">
-        <div>
+        <div className="[&_label]:block [&_label]:text-sm [&_label]:font-medium [&_label]:text-white [&_label]:mb-1">
           <AutocompleteSelect
             ref={patientRef}
             label="Patient"
             placeholder="Search by first or last name"
-            fetcher={(patientName) => searchPatients(patientName, 10)}
+            fetcher={(q) => searchPatients(q, 10)}
             onSelect={(opt) => setPatientId(opt.id)}
             className="input"
           />
         </div>
 
-        <div>
+        <div className="[&_label]:block [&_label]:text-sm [&_label]:font-medium [&_label]:text-white [&_label]:mb-1">
           <AutocompleteSelect
             ref={doctorRef}
             label="Doctor"
             placeholder="Search by first or last name"
-            fetcher={(doctorName) => searchDoctors(doctorName, 10)}
+            fetcher={(q) => searchDoctors(q, 10)}
             onSelect={(opt) => setProviderId(opt.id)}
             className="input"
           />
         </div>
 
         <div>
-          <label className="label">Date</label>
+          <label className="block text-sm font-medium text-white mb-1">Date</label>
           <DatePicker
             value={dateStr}
             onChange={(v) => setDateStr(v)}
@@ -95,7 +95,7 @@ function AppointmentForm({
         </div>
 
         <div>
-          <label className="label">Time</label>
+          <label className="block text-sm font-medium text-white mb-1">Time</label>
           <TimePicker
             value={timeStr}
             onChange={(v) => setTimeStr(v)}
@@ -107,26 +107,17 @@ function AppointmentForm({
 
         {notesEnabled && (
           <div className="sm:col-span-2">
-            <label className="label">Notes</label>
+            <label className="block text-sm font-medium text-white mb-1">Notes</label>
             <textarea
               className="input min-h-[100px]"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Optional notes for this appointment"
+              placeholder="Notes for this appointment"
             />
           </div>
         )}
       </div>
-
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-white/10"></div>
-        </div>
-        <div className="relative flex justify-center">
-          <span className="bg-bg px-3 text-sm text-white/70">Confirm appointment</span>
-        </div>
-      </div>
-
+      
       <div className="flex items-center gap-3">
         <button
           type={canCreate ? "submit" : "button"}

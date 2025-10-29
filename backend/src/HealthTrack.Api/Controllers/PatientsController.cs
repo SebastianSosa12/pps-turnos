@@ -57,4 +57,36 @@ public class PatientsController : ControllerBase
 
     return Created($"/api/patients/{entity.Id}", entity);
   }
+
+  [HttpPut("{id}")]
+  public async Task<ActionResult<Patient>> Update(string id, [FromBody] PatientDto dto, CancellationToken ct)
+  {
+    if (string.IsNullOrWhiteSpace(dto.FullName) || string.IsNullOrWhiteSpace(dto.Email))
+      return BadRequest(new { error = "FullName and Email are required" });
+
+    if (!Guid.TryParse(id, out var guid)) return NotFound();
+
+    var patient = await _db.Patients.FirstOrDefaultAsync(p => p.Id == guid, ct);
+    if (patient is null) return NotFound();
+
+    patient.FullName = dto.FullName;
+    patient.Email = dto.Email;
+    patient.DateOfBirth = dto.DateOfBirth;
+
+    await _db.SaveChangesAsync(ct);
+    return Ok(patient);
+  }
+
+  [HttpDelete("{id}")]
+  public async Task<IActionResult> Delete(string id, CancellationToken ct)
+  {
+    if (!Guid.TryParse(id, out var guid)) return NotFound();
+
+    var patient = await _db.Patients.FirstOrDefaultAsync(p => p.Id == guid, ct);
+    if (patient is null) return NotFound();
+
+    _db.Patients.Remove(patient);
+    await _db.SaveChangesAsync(ct);
+    return NoContent();
+  }
 }
