@@ -12,6 +12,7 @@ import {
   getPatients,
   updateAppointment,
   deleteAppointment,
+  getAuthRole,
   type Appointment,
   type Doctor,
   type Patient,
@@ -31,6 +32,9 @@ export default function AppointmentsManager({ notesEnabled }: Props) {
   const [editDate, setEditDate] = useState("");
   const [editTime, setEditTime] = useState("");
   const [editNotes, setEditNotes] = useState("");
+
+  const role = getAuthRole();
+  const isAdmin = role === "Admin";
 
   async function loadLookups() {
     const [patients, doctors] = await Promise.all([getPatients(), getDoctors()]);
@@ -58,6 +62,7 @@ export default function AppointmentsManager({ notesEnabled }: Props) {
   }, [q]);
 
   function beginEdit(a: Appointment) {
+    if (!isAdmin) return;
     setEditingId(a.id);
     const start = new Date(a.startsAtUtc);
     const dateStr = start.toISOString().slice(0, 10);
@@ -77,6 +82,7 @@ export default function AppointmentsManager({ notesEnabled }: Props) {
   }
 
   async function saveEdit(a: Appointment) {
+    if (!isAdmin) return;
     if (!editingId || !editDate || !editTime) return;
     setStatus("Submitting…");
     try {
@@ -98,6 +104,7 @@ export default function AppointmentsManager({ notesEnabled }: Props) {
   }
 
   async function remove(id: string) {
+    if (!isAdmin) return;
     setStatus("Submitting…");
     try {
       await deleteAppointment(id);
@@ -138,62 +145,66 @@ export default function AppointmentsManager({ notesEnabled }: Props) {
                           <div className="text-mute text-sm">{dateLine}</div>
                           {a.notes ? <div className="text-sm text-white/70 mt-1">{a.notes}</div> : null}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
-                            title="Edit"
-                            onClick={() => beginEdit(a)}
-                          >
-                            <Pencil size={16} />
-                          </button>
-                          <button
-                            className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
-                            title="Delete"
-                            onClick={() => remove(a.id)}
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
+                        {isAdmin && (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
+                              title="Edit"
+                              onClick={() => beginEdit(a)}
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
+                              title="Delete"
+                              onClick={() => remove(a.id)}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <div className="grid gap-2 md:grid-cols-3">
-                          <div>
-                            <label className="block text-sm font-medium text-white mb-1">Date</label>
-                            <DatePicker
-                              value={editDate}
-                              onChange={setEditDate}
-                              placeholder="Select Date"
-                              className="input"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-white mb-1">Time</label>
-                            <TimePicker
-                              value={editTime}
-                              onChange={setEditTime}
-                              minuteStep={5}
-                              placeholder="Select Time"
-                              className="input"
-                            />
-                          </div>
-                          {notesEnabled && (
-                            <div className="md:col-span-1">
-                              <label className="block text-sm font-medium text-white mb-1">Notes</label>
-                              <input
+                      isAdmin && (
+                        <div className="space-y-2">
+                          <div className="grid gap-2 md:grid-cols-3">
+                            <div>
+                              <label className="block text-sm font-medium text-white mb-1">Date</label>
+                              <DatePicker
+                                value={editDate}
+                                onChange={setEditDate}
+                                placeholder="Select Date"
                                 className="input"
-                                value={editNotes}
-                                onChange={(e) => setEditNotes(e.target.value)}
-                                placeholder="Notes"
                               />
                             </div>
-                          )}
+                            <div>
+                              <label className="block text-sm font-medium text-white mb-1">Time</label>
+                              <TimePicker
+                                value={editTime}
+                                onChange={setEditTime}
+                                minuteStep={5}
+                                placeholder="Select Time"
+                                className="input"
+                              />
+                            </div>
+                            {notesEnabled && (
+                              <div className="md:col-span-1">
+                                <label className="block text-sm font-medium text-white mb-1">Notes</label>
+                                <input
+                                  className="input"
+                                  value={editNotes}
+                                  onChange={(e) => setEditNotes(e.target.value)}
+                                  placeholder="Notes"
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => saveEdit(a)} className="btn-primary px-4 py-2">Save</button>
+                            <button onClick={cancelEdit} className="px-4 py-2 rounded-lg border border-white/10 hover:bg-white/10">Cancel</button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => saveEdit(a)} className="btn-primary px-4 py-2">Save</button>
-                          <button onClick={cancelEdit} className="px-4 py-2 rounded-lg border border-white/10 hover:bg-white/10">Cancel</button>
-                        </div>
-                      </div>
+                      )
                     )}
                   </li>
                 );
@@ -209,18 +220,20 @@ export default function AppointmentsManager({ notesEnabled }: Props) {
               <SearchBar
                 value={q}
                 onChange={setQ}
-                placeholder="Search by patient, doctor or notes"
+                placeholder="Search by patient, doctor, specialty or notes"
               />
             </div>
           </div>
 
-          <Divider label="Create appointment" />
+          {isAdmin && <Divider label="Create appointment" />}
 
-          <div className="space-y-3">
-            <SectionTitle icon={CalendarPlus}>Create</SectionTitle>
-            <AppointmentForm notesEnabled={notesEnabled} onCreated={() => load(q)} />
-            <div className="text-sm text-white/70">{status}</div>
-          </div>
+          {isAdmin && (
+            <div className="space-y-3">
+              <SectionTitle icon={CalendarPlus}>Create</SectionTitle>
+              <AppointmentForm notesEnabled={notesEnabled} onCreated={() => load(q)} />
+              <div className="text-sm text-white/70">{status}</div>
+            </div>
+          )}
         </div>
       </div>
     </div>

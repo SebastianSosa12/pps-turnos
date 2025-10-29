@@ -7,86 +7,87 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HealthTrack.Api.Controllers;
 
-[AllowAnonymous]
+[Authorize(Policy = "ReadOnlyUser")]
 [ApiController]
 [Route("api/[controller]")]
 public class PatientsController : ControllerBase
 {
-  private readonly HealthTrackDbContext _db;
-  public PatientsController(HealthTrackDbContext db) => _db = db;
+    private readonly HealthTrackDbContext db;
 
-  [HttpGet]
-  public async Task<ActionResult<IEnumerable<Patient>>> Get(
-    [FromQuery] string? patientName,
-    [FromQuery] int limit = 10,
-    CancellationToken ct = default)
-  {
-    var max = Math.Clamp(limit, 1, 50);
-
-    var query = _db.Patients.AsNoTracking();
-
-    if (!string.IsNullOrWhiteSpace(patientName))
+    public PatientsController(HealthTrackDbContext db)
     {
-      var term = patientName.Trim().ToLower();
-      query = query.Where(p => p.FullName.ToLower().Contains(term));
+        this.db = db;
     }
 
-    var list = await query
-      .OrderBy(p => p.FullName)
-      .Take(max)
-      .ToListAsync(ct);
-
-    return Ok(list);
-  }
-
-  [HttpPost]
-  public async Task<ActionResult<Patient>> Create([FromBody] PatientDto dto, CancellationToken ct)
-  {
-    if (string.IsNullOrWhiteSpace(dto.FullName) || string.IsNullOrWhiteSpace(dto.Email))
-      return BadRequest(new { error = "FullName and Email are required" });
-
-    var entity = new Patient
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Patient>>> Get(
+        [FromQuery] string? patientName,
+        [FromQuery] int limit = 10,
+        CancellationToken cancellationToken = default)
     {
-      FullName = dto.FullName,
-      Email = dto.Email,
-      DateOfBirth = dto.DateOfBirth
-    };
+        var max = Math.Clamp(limit, 1, 50);
+        IQueryable<Patient> query = db.Patients.AsNoTracking();
 
-    _db.Patients.Add(entity);
-    await _db.SaveChangesAsync(ct);
+        if (!string.IsNullOrWhiteSpace(patientName))
+        {
+            var like = $"%{patientName.Trim()}%";
+            query = query.Where(p =>
+                EF.Functions.Like(p.FullName, like) ||
+                EF.Functions.Like(p.Email, like));
+        }
 
-    return Created($"/api/patients/{entity.Id}", entity);
-  }
+        var list = await query
+            .OrderBy(p => p.FullName)
+            .Take(max)
+            .ToListAsync(cancellationToken);
 
-  [HttpPut("{id}")]
-  public async Task<ActionResult<Patient>> Update(string id, [FromBody] PatientDto dto, CancellationToken ct)
-  {
-    if (string.IsNullOrWhiteSpace(dto.FullName) || string.IsNullOrWhiteSpace(dto.Email))
-      return BadRequest(new { error = "FullName and Email are required" });
+        return Ok(list);
+    }
 
-    if (!Guid.TryParse(id, out var guid)) return NotFound();
+    [Authorize(Policy = "AdminOnly")]
+    [HttpPost]
+    public async Task<ActionResult<Patient>> Create([FromBody] PatientDto dto, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(dto.FullName) || string.IsNullOrWhiteSpace(dto.Email))
+            return BadRequest(new { error = "FullName and Email are required" });
 
-    var patient = await _db.Patients.FirstOrDefaultAsync(p => p.Id == guid, ct);
-    if (patient is null) return NotFound();
+        var entity = new Patient
+        {
+            FullName = dto.FullName,
+            Email = dto.Email,
+            DateOfBirth = dto.DateOfBirth
+        };
 
-    patient.FullName = dto.FullName;
-    patient.Email = dto.Email;
-    patient.DateOfBirth = dto.DateOfBirth;
+        db.Patients.Add(entity);
+        await db.SaveChangesAsync(cancellationToken);
 
-    await _db.SaveChangesAsync(ct);
-    return Ok(patient);
-  }
+        return CreatedAtAction(nameof(Get), new { id = entity.Id }, entity);
+    }
 
-  [HttpDelete("{id}")]
-  public async Task<IActionResult> Delete(string id, CancellationToken ct)
-  {
-    if (!Guid.TryParse(id, out var guid)) return NotFound();
+    [Authorize(Policy = "AdminOnly")]
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<Patient>> Update(Guid id, [FromBody] PatientDto dto, CancellationToken cancellationToken)
+    {
+        var entity = await db.Patients.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        if (entity is null) return NotFound();
 
-    var patient = await _db.Patients.FirstOrDefaultAsync(p => p.Id == guid, ct);
-    if (patient is null) return NotFound();
+        entity.FullName = dto.FullName;
+        entity.Email = dto.Email;
+        entity.DateOfBirth = dto.DateOfBirth;
 
-    _db.Patients.Remove(patient);
-    await _db.SaveChangesAsync(ct);
-    return NoContent();
-  }
+        await db.SaveChangesAsync(cancellationToken);
+        return Ok(entity);
+    }
+
+    [Authorize(Policy = "AdminOnly")]
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await db.Patients.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        if (entity is null) return NotFound();
+
+        db.Patients.Remove(entity);
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
 }

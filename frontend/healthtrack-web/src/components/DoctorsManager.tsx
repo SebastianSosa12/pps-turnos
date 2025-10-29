@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { getDoctors, createDoctor, updateDoctor, deleteDoctor, type Doctor } from "../api";
+import { getDoctors, createDoctor, updateDoctor, deleteDoctor, type Doctor, getAuthRole } from "../api";
 import SectionTitle from "./SectionTitle";
 import SearchBar from "./SearchBar";
 import Divider from "./Divider";
@@ -19,6 +19,9 @@ export default function DoctorsManager() {
   const [editEmail, setEditEmail] = useState("");
   const [editSpecialty, setEditSpecialty] = useState("");
 
+  const role = getAuthRole();
+  const isAdmin = role === "Admin";
+
   async function load(query: string) {
     const data = await getDoctors(query);
     setItems(data);
@@ -37,6 +40,7 @@ export default function DoctorsManager() {
 
   async function addDoctor(e: React.FormEvent) {
     e.preventDefault();
+    if (!isAdmin) return;
     if (!fullName || !email || !specialty) {
       setStatus("Please complete all required fields before adding a doctor.");
       return;
@@ -55,6 +59,7 @@ export default function DoctorsManager() {
   }
 
   function startEdit(d: Doctor) {
+    if (!isAdmin) return;
     setEditingId(d.id);
     setEditFullName(d.fullName ?? "");
     setEditEmail(d.email ?? "");
@@ -69,6 +74,7 @@ export default function DoctorsManager() {
   }
 
   async function saveEdit() {
+    if (!isAdmin) return;
     if (!editingId || !editFullName || !editEmail || !editSpecialty) {
       setStatus("Please complete all required fields before saving.");
       return;
@@ -89,6 +95,7 @@ export default function DoctorsManager() {
   }
 
   async function onDelete(id: string) {
+    if (!isAdmin) return;
     setStatus("Submitting…");
     try {
       await deleteDoctor(id);
@@ -137,56 +144,62 @@ export default function DoctorsManager() {
                           <div className="text-sm text-white/70 mr-1 min-w-[110px] text-right">
                             {d.specialty || "—"}
                           </div>
-                          <button
-                            className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
-                            title="Edit"
-                            onClick={() => startEdit(d)}
-                          >
-                            <Pencil size={16} />
-                          </button>
-                          <button
-                            className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
-                            title="Delete"
-                            onClick={() => onDelete(d.id)}
-                          >
-                            <X size={16} />
-                          </button>
+                          {isAdmin && (
+                            <>
+                              <button
+                                className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
+                                title="Edit"
+                                onClick={() => startEdit(d)}
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              <button
+                                className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
+                                title="Delete"
+                                onClick={() => onDelete(d.id)}
+                              >
+                                <X size={16} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <div className="grid gap-2 md:grid-cols-3">
-                          <div>
-                            <label className="block text-sm font-medium text-white mb-1">Full name</label>
-                            <input
-                              className="input"
-                              value={editFullName}
-                              onChange={(e) => setEditFullName(e.target.value)}
-                            />
+                      isAdmin && (
+                        <div className="space-y-2">
+                          <div className="grid gap-2 md:grid-cols-3">
+                            <div>
+                              <label className="block text-sm font-medium text-white mb-1">Full name</label>
+                              <input
+                                className="input"
+                                value={editFullName}
+                                onChange={(e) => setEditFullName(e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-white mb-1">Email</label>
+                              <input
+                                className="input"
+                                type="email"
+                                value={editEmail}
+                                onChange={(e) => setEditEmail(e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-white mb-1">Specialty</label>
+                              <input
+                                className="input"
+                                value={editSpecialty}
+                                onChange={(e) => setEditSpecialty(e.target.value)}
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-white mb-1">Email</label>
-                            <input
-                              className="input"
-                              type="email"
-                              value={editEmail}
-                              onChange={(e) => setEditEmail(e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-white mb-1">Specialty</label>
-                            <input
-                              className="input"
-                              value={editSpecialty}
-                              onChange={(e) => setEditSpecialty(e.target.value)}
-                            />
+                          <div className="flex items-center gap-2">
+                            <button onClick={saveEdit} className="btn-primary px-4 py-2">Save</button>
+                            <button onClick={cancelEdit} className="px-4 py-2 rounded-lg border border-white/10 hover:bg-white/10">Cancel</button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button onClick={saveEdit} className="btn-primary px-4 py-2">Save</button>
-                          <button onClick={cancelEdit} className="px-4 py-2 rounded-lg border border-white/10 hover:bg-white/10">Cancel</button>
-                        </div>
-                      </div>
+                      )
                     )}
                   </li>
                 );
@@ -197,59 +210,61 @@ export default function DoctorsManager() {
         </div>
 
         <div className="space-y-6">
-          <Divider label="Add a Doctor" />
-          <div className="space-y-3">
-            <SectionTitle icon={UserPlus}>Add</SectionTitle>
-            <form onSubmit={addDoctor} className="space-y-3">
-              <div className="grid gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Full name</label>
-                  <input
-                    className="input"
-                    placeholder="Jane Smith"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    autoComplete="name"
-                  />
+          {isAdmin && <Divider label="Add a Doctor" />}
+          {isAdmin && (
+            <div className="space-y-3">
+              <SectionTitle icon={UserPlus}>Add</SectionTitle>
+              <form onSubmit={addDoctor} className="space-y-3">
+                <div className="grid gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Full name</label>
+                    <input
+                      className="input"
+                      placeholder="Jane Smith"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      autoComplete="name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Email</label>
+                    <input
+                      className="input"
+                      placeholder="jane@clinic.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      type="email"
+                      autoComplete="email"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Specialty</label>
+                    <input
+                      className="input"
+                      placeholder="Cardiology"
+                      value={specialty}
+                      onChange={(e) => setSpecialty(e.target.value)}
+                      autoComplete="organization-title"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Email</label>
-                  <input
-                    className="input"
-                    placeholder="jane@clinic.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    type="email"
-                    autoComplete="email"
-                  />
+                <div className="flex items-center gap-3">
+                  <button
+                    type={canAdd ? "submit" : "button"}
+                    onClick={
+                      !canAdd
+                        ? () => setStatus("Please complete all required fields before adding a doctor.")
+                        : undefined
+                    }
+                    className={`btn-primary w-full flex justify-center ${!canAdd ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    Add
+                  </button>
+                  <span className="text-sm text-white/70">{status}</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Specialty</label>
-                  <input
-                    className="input"
-                    placeholder="Cardiology"
-                    value={specialty}
-                    onChange={(e) => setSpecialty(e.target.value)}
-                    autoComplete="organization-title"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type={canAdd ? "submit" : "button"}
-                  onClick={
-                    !canAdd
-                      ? () => setStatus("Please complete all required fields before adding a doctor.")
-                      : undefined
-                  }
-                  className={`btn-primary w-full flex justify-center ${!canAdd ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                  Add
-                </button>
-                <span className="text-sm text-white/70">{status}</span>
-              </div>
-            </form>
-          </div>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </div>

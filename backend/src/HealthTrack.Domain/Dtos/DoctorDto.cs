@@ -1,8 +1,19 @@
-namespace HealthTrack.Domain.Dtos;
+using System.ComponentModel.DataAnnotations;
 
-public class DoctorDto
+namespace HealthTrack.Domain.Dtos
 {
-  public string FullName { get; set; } = null!;
-  public string Email { get; set; } = null!;
-  public string Specialty { get; set; } = string.Empty;
+  public sealed class DoctorDto
+  {
+    [Required]
+    [StringLength(100)]
+    public string FullName { get; set; } = string.Empty;
+
+    [Required]
+    [EmailAddress]
+    [StringLength(254)]
+    public string Email { get; set; } = string.Empty;
+
+    [StringLength(100)]
+    public string Specialty { get; set; } = string.Empty;
+  }
 }

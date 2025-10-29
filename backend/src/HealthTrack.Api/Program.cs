@@ -4,47 +4,55 @@ using HealthTrack.Application.Services;
 using HealthTrack.Infrastructure.Data;
 using HealthTrack.Infrastructure.Features;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ========================================
-// 📋 Configuration Extraction
-// ========================================
+string? connectionString =
+    builder.Configuration.GetConnectionString("Default") ??
+    builder.Configuration["ConnectionStrings:Default"] ??
+    Environment.GetEnvironmentVariable("ConnectionStrings__Default");
 
-var connectionString = builder.Configuration.GetConnectionString("Default")
-                       ?? Environment.GetEnvironmentVariable("ConnectionStrings__Default");
 if (string.IsNullOrWhiteSpace(connectionString))
     throw new InvalidOperationException("Missing connection string 'Default'");
 
-var awsServiceUrl = builder.Configuration["AWS:ServiceURL"] ?? Environment.GetEnvironmentVariable("AWS__ServiceURL");
-var featureFlagsFallbackPath = builder.Configuration["FeatureFlags:FallbackPath"];
+string? awsServiceUrl =
+    builder.Configuration["AWS:ServiceURL"] ??
+    Environment.GetEnvironmentVariable("AWS__ServiceURL");
 
-var jwtSecret = builder.Configuration["Jwt:Secret"] ?? Environment.GetEnvironmentVariable("JWT__SECRET") ?? "super-secret-jwt-key-for-healthtrack-that-should-be-changed-in-production";
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HealthTrack";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HealthTrack";
+string? featureFlagsFallbackPath = builder.Configuration["FeatureFlags:FallbackPath"];
 
-// ========================================
-// 🎛️ Service Registration
-// ========================================
+string jwtKey =
+    builder.Configuration["JWT:Key"] ??
+    builder.Configuration["Jwt:Secret"] ??
+    Environment.GetEnvironmentVariable("JWT__KEY") ??
+    Environment.GetEnvironmentVariable("JWT__SECRET") ??
+    "change-this-default-healthtrack-jwt-key";
 
-// CORS Configuration
+string jwtIssuer =
+    builder.Configuration["JWT:Issuer"] ??
+    builder.Configuration["Jwt:Issuer"] ??
+    Environment.GetEnvironmentVariable("JWT__ISSUER") ??
+    "HealthTrack";
+
+string jwtAudience =
+    builder.Configuration["JWT:Audience"] ??
+    builder.Configuration["Jwt:Audience"] ??
+    Environment.GetEnvironmentVariable("JWT__AUDIENCE") ??
+    "HealthTrack";
+
 builder.Services.AddCors(options =>
 {
   options.AddPolicy("AllowFrontend", policy =>
   {
     policy
-      .SetIsOriginAllowed(origin =>
-      {
-        if (string.IsNullOrEmpty(origin)) return false;
-        try
-        {
-          var uri = new Uri(origin);
-          return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
-        }
-        catch { return false; }
-      })
+      .WithOrigins(
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:3000"
+      )
       .AllowAnyHeader()
       .AllowAnyMethod()
       .AllowCredentials();
@@ -52,8 +60,8 @@ builder.Services.AddCors(options =>
 });
 
 
-// Controllers & JSON Configuration
-builder.Services.AddControllers()
+builder.Services
+    .AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
@@ -61,20 +69,21 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
-// Database
 builder.Services.AddDbContext<HealthTrackDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
-// Feature Flags
 var featureFlagProvider = DynamoFeatureFlagProvider.Create(awsServiceUrl);
 builder.Services.AddSingleton<IFeatureFlagService>(new FeatureFlagService(featureFlagProvider, featureFlagsFallbackPath));
 
-// Application Services
 builder.Services.AddScoped<AppointmentService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// JWT Authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -85,35 +94,32 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtSecret)),
-            ClockSkew = TimeSpan.Zero // Removes the default 5-minute tolerance
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ClockSkew = TimeSpan.Zero
         };
     });
 
-builder.Services.AddAuthorization();
-
-// ========================================
-// 🚀 Application Building & Configuration
-// ========================================
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+    options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
+    options.AddPolicy("ReadOnlyUser", p => p.RequireRole("User", "Admin"));
+});
 
 var app = builder.Build();
 
-// Database Initialization (Development/Local)
 using (var scope = app.Services.CreateScope())
 {
   var dbContext = scope.ServiceProvider.GetRequiredService<HealthTrackDbContext>();
-
-  // Development: keep data between restarts
   dbContext.Database.EnsureCreated();
-
-  // If you use EF Migrations, prefer this instead:
-  // dbContext.Database.Migrate();
 }
 
-// Middleware Pipeline
-app.UseCors("AllowFrontend");  // 🌐 Enable CORS before routing
-app.UseAuthentication();       // 🔐 JWT Authentication middleware
-app.UseAuthorization();        // 🛡️ Authorization middleware
+
+app.UseCors("AllowFrontend");
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { getPatients, createPatient, updatePatient, deletePatient } from "../api";
+import { isAdmin } from "../api";
 import SectionTitle from "./SectionTitle";
 import SearchBar from "./SearchBar";
 import Divider from "./Divider";
@@ -51,6 +52,7 @@ function PatientsList() {
   }
 
   async function startEdit(p: any) {
+    if (!isAdmin()) return;
     setEditingId(p.id);
     setEditFullName(p.fullName ?? "");
     setEditEmail(p.email ?? "");
@@ -87,6 +89,7 @@ function PatientsList() {
   }
 
   async function onDelete(id: string) {
+    if (!isAdmin()) return;
     setStatus("Submitting…");
     try {
       await deletePatient(id);
@@ -135,9 +138,7 @@ function PatientsList() {
               {items.map((p) => {
                 const d = new Date(p.dateOfBirth);
                 const dob = isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-
                 const isEditing = editingId === p.id;
-
                 return (
                   <li
                     key={p.id}
@@ -150,22 +151,24 @@ function PatientsList() {
                           <div className="text-mute text-sm truncate">{p.email}</div>
                           <div className="text-sm text-white/70">{dob}</div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
-                            title="Edit"
-                            onClick={() => startEdit(p)}
-                          >
-                            <Pencil size={16} />
-                          </button>
-                          <button
-                            className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
-                            title="Delete"
-                            onClick={() => onDelete(p.id)}
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
+                        {isAdmin() && (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
+                              title="Edit"
+                              onClick={() => startEdit(p)}
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              className="p-2 rounded-lg border border-white/10 hover:bg-white/10"
+                              title="Delete"
+                              onClick={() => onDelete(p.id)}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -218,67 +221,68 @@ function PatientsList() {
               })}
             </ul>
           )}
+          <div className="text-sm text-white/70">{status}</div>
         </div>
 
-        <div className="space-y-6">
-          <Divider label="Add a Patient" />
-          <div className="space-y-3">
-            <SectionTitle icon={UserPlus}>Add</SectionTitle>
-            <form onSubmit={addPatient} className="space-y-3">
-              <div className="grid gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Full name</label>
-                  <input
-                    className="input"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    autoComplete="name"
-                  />
+        {isAdmin() && (
+          <div className="space-y-6">
+            <Divider label="Add a Patient" />
+            <div className="space-y-3">
+              <SectionTitle icon={UserPlus}>Add</SectionTitle>
+              <form onSubmit={addPatient} className="space-y-3">
+                <div className="grid gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Full name</label>
+                    <input
+                      className="input"
+                      placeholder="John Doe"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      autoComplete="name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Email</label>
+                    <input
+                      className="input"
+                      placeholder="john@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      type="email"
+                      autoComplete="email"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Date of Birth</label>
+                    <DatePicker
+                      value={dateOfBirth}
+                      onChange={setDateOfBirth}
+                      placeholder="Select Date"
+                      className="input"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Email</label>
-                  <input
-                    className="input"
-                    placeholder="john@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    type="email"
-                    autoComplete="email"
-                  />
+                <div className="flex items-center gap-3">
+                  <button
+                    type={canAdd ? "submit" : "button"}
+                    onClick={
+                      !canAdd
+                        ? () =>
+                          setStatus(
+                            "Please complete all required fields before adding a patient."
+                          )
+                        : undefined
+                    }
+                    className={`btn-primary w-full flex justify-center ${!canAdd ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    Add
+                  </button>
+                  <span className="text-sm text-white/70">{status}</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Date of Birth</label>
-                  <DatePicker
-                    value={dateOfBirth}
-                    onChange={setDateOfBirth}
-                    placeholder="Select Date"
-                    className="input"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type={canAdd ? "submit" : "button"}
-                  onClick={
-                    !canAdd
-                      ? () =>
-                        setStatus(
-                          "Please complete all required fields before adding a patient."
-                        )
-                      : undefined
-                  }
-                  className={`btn-primary w-full flex justify-center ${
-                    !canAdd ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                >
-                  Add
-                </button>
-                <span className="text-sm text-white/70">{status}</span>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

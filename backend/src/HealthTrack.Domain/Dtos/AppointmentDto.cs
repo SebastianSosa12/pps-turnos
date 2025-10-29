@@ -2,7 +2,7 @@
 
 namespace HealthTrack.Domain.Dtos
 {
-  public class AppointmentDto
+  public sealed class AppointmentDto
   {
     public Guid PatientId { get; set; }
     public Guid ProviderId { get; set; }
