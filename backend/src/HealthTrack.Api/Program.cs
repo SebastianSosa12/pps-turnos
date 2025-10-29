@@ -69,8 +69,12 @@ builder.Services
         options.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
+var serverVersion = new MySqlServerVersion(new Version(8, 0, 36));
 builder.Services.AddDbContext<HealthTrackDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+  options.UseMySql(connectionString, serverVersion, mySql =>
+  {
+    mySql.EnableRetryOnFailure();
+  }));
 
 var featureFlagProvider = DynamoFeatureFlagProvider.Create(awsServiceUrl);
 builder.Services.AddSingleton<IFeatureFlagService>(new FeatureFlagService(featureFlagProvider, featureFlagsFallbackPath));
